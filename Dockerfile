@@ -1,33 +1,27 @@
-# Start from a Debian image with the latest version of Go installed
-# and a workspace (GOPATH) configured at /go.
-FROM golang:1.8
+FROM golang:alpine as builder
 
-# Build the zfs-exporter command inside the container.
+RUN apk add --no-cache git build-base && \
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.12/main zfs-dev=0.8.4-r0
 
-#add the contrib repo to install the ZFS libs
-RUN echo "deb http://ftp.debian.org/debian jessie-backports main contrib" >> /etc/apt/sources.list.d/backports.list
+WORKDIR /zfs-exporter
 
-RUN apt-get update
-RUN apt-get install lsb-release
+COPY zfs-exporter/go.mod .
+COPY zfs-exporter/go.sum .
 
+RUN go mod download
 
-#Use debian libdev pkg to replace the 404'ed ZoL pkg
-RUN apt-get install --yes libzfslinux-dev
+COPY zfs-exporter/ .
 
-RUN dpkg --configure -a
+RUN go build -ldflags="-s -w" .
 
+FROM alpine
 
-RUN go get github.com/ncabatoff/go-libzfs github.com/prometheus/client_golang/prometheus
+RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.12/main zfs-libs=0.8.4-r0
 
-# Copy the local package files to the container's workspace.
-ADD zfs-exporter /go/src/github.com/ncabatoff/zfs-exporter
-
-RUN go install github.com/ncabatoff/zfs-exporter
+COPY --from=builder /zfs-exporter/zfs-exporter /usr/local/bin
 
 USER root
 
-# Run the zfs-exporter command by default when the container starts.
-ENTRYPOINT /go/bin/zfs-exporter
+ENTRYPOINT /usr/local/bin/zfs-exporter
 
-# Document that the service listens on port 9254.
 EXPOSE 9254

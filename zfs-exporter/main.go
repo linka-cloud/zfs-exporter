@@ -7,7 +7,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/ncabatoff/go-libzfs"
+	"github.com/bicomsystems/go-libzfs"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -201,7 +201,7 @@ func (z *ZfsCollector) collectPool(ch chan<- prometheus.Metric, pool zfs.Pool) {
 		vType := string(vdt.Type)
 		// log.Printf("visiting pool %s vdev %s id %d type %s path %s", poolname(pool), vdt.Name, vdt.Id, vType, vdt.Path)
 
-		id := fmt.Sprintf("%d", vdt.Id)
+		id := fmt.Sprintf("%d", vdt.GUID)
 		ch <- prometheus.MustNewConstMetric(vdevstateDesc, prometheus.GaugeValue,
 			float64(vdt.Stat.State), poolName, vType, vdt.Name, id)
 		ch <- prometheus.MustNewConstMetric(vdevallocDesc, prometheus.GaugeValue,
